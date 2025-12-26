@@ -1,9 +1,8 @@
-
 import { Student, ClassSchedule } from './types';
 
 const STORAGE_KEYS = {
-  STUDENTS: 'tutortrack_students_v1',
-  SCHEDULES: 'tutortrack_schedules_v1'
+  STUDENTS: 'tutortrack_v2_students',
+  SCHEDULES: 'tutortrack_v2_schedules'
 };
 
 class ApiService {
@@ -18,9 +17,8 @@ class ApiService {
         }
       }
     } catch (e) {
-      console.warn("Cloud fetch failed, using local storage.");
+      console.warn("Cloud connection unavailable, switching to local vault.");
     }
-    
     const local = localStorage.getItem(STORAGE_KEYS.STUDENTS);
     return local ? JSON.parse(local) : [];
   }
@@ -33,9 +31,7 @@ class ApiService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(students),
       });
-    } catch (e) {
-      console.error("Cloud save failed, data kept locally.");
-    }
+    } catch (e) {}
   }
 
   static async getSchedules(): Promise<ClassSchedule[]> {
@@ -49,7 +45,6 @@ class ApiService {
         }
       }
     } catch (e) {}
-    
     const local = localStorage.getItem(STORAGE_KEYS.SCHEDULES);
     return local ? JSON.parse(local) : [];
   }
