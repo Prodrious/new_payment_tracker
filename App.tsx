@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, CalendarDays, 
-  Menu, X, LogOut, Bell, Search, Settings, Loader2, CloudUpload, CheckCircle2
+  Menu, LogOut, Bell, Loader2, CloudUpload, CheckCircle2, 
+  Database, AlertTriangle, ExternalLink, RefreshCw
 } from 'lucide-react';
 import Dashboard from './components/Dashboard.tsx';
 import StudentsPage from './components/StudentsPage.tsx';
@@ -17,30 +18,34 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // Initial Data Load from MongoDB
+  const fetchData = async () => {
+    setIsLoading(true);
+    setDbError(null);
+    try {
+      const [loadedStudents, loadedSchedules] = await Promise.all([
+        ApiService.getStudents(),
+        ApiService.getSchedules()
+      ]);
+      setStudents(loadedStudents);
+      setSchedules(loadedSchedules);
+    } catch (error: any) {
+      console.error("Critical: Database connection failed", error);
+      setDbError(error.message || "Failed to connect to MongoDB. Check your environment variables.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const initData = async () => {
-      try {
-        const [loadedStudents, loadedSchedules] = await Promise.all([
-          ApiService.getStudents(),
-          ApiService.getSchedules()
-        ]);
-        setStudents(loadedStudents);
-        setSchedules(loadedSchedules);
-      } catch (error) {
-        console.error("Critical: Database connection failed", error);
-        alert("Database connection failed. Please ensure MONGODB_URI is set in Vercel settings.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    initData();
+    fetchData();
   }, []);
 
   // Sync Logic: Push to MongoDB on changes
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !dbError) {
       const sync = async () => {
         setIsSyncing(true);
         try {
@@ -53,10 +58,10 @@ const App: React.FC = () => {
       };
       sync();
     }
-  }, [students, isLoading]);
+  }, [students, isLoading, dbError]);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !dbError) {
       const sync = async () => {
         setIsSyncing(true);
         try {
@@ -69,7 +74,7 @@ const App: React.FC = () => {
       };
       sync();
     }
-  }, [schedules, isLoading]);
+  }, [schedules, isLoading, dbError]);
 
   const addStudent = (student: Student) => setStudents(prev => [...prev, student]);
   const updateStudent = (updated: Student) => setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
@@ -82,16 +87,50 @@ const App: React.FC = () => {
     if (confirm("This will permanently erase all MongoDB records. Continue?")) {
       setStudents([]);
       setSchedules([]);
-      // Clear storage just in case legacy data exists
       localStorage.clear();
       window.location.reload();
     }
   };
 
+  // Loading State
   if (isLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#0f172a] text-white">
       <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-      <p className="text-sm font-black uppercase tracking-[0.3em] opacity-50">Connecting to MongoDB...</p>
+      <p className="text-sm font-black uppercase tracking-[0.3em] opacity-50">Handshaking with MongoDB...</p>
+    </div>
+  );
+
+  // Database Connection Error State
+  if (dbError) return (
+    <div className="h-screen flex items-center justify-center bg-[#f8fafc] p-6">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-rose-100 p-10 text-center animate-slide-in">
+        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
+          <Database className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl font-black text-slate-900 mb-4 tracking-tighter">Database Connectivity Error</h1>
+        <p className="text-slate-500 text-sm leading-relaxed mb-8">
+          We couldn't reach your MongoDB instance. If you've just deployed to Vercel, please ensure you've added the 
+          <code className="mx-1 px-1.5 py-0.5 bg-slate-100 rounded text-rose-600 font-bold">MONGODB_URI</code> 
+          to your environment variables.
+        </p>
+        <div className="space-y-4">
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
+          >
+            <RefreshCw className="w-4 h-4" /> Try Again
+          </button>
+          <a 
+            href="https://vercel.com/dashboard" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all"
+          >
+            <ExternalLink className="w-4 h-4" /> Vercel Settings
+          </a>
+        </div>
+        <p className="mt-8 text-[10px] font-bold text-rose-400 uppercase tracking-widest">Error: {dbError}</p>
+      </div>
     </div>
   );
 
@@ -153,7 +192,7 @@ const App: React.FC = () => {
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center font-bold text-white shadow-sm shadow-indigo-500/30">A</div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-white truncate uppercase tracking-tighter">Academic Admin</p>
-                <p className="text-[10px] text-slate-500 truncate uppercase font-bold">Cloud Connected</p>
+                <p className="text-[10px] text-slate-500 truncate uppercase font-bold">Vercel Backend</p>
               </div>
             </div>
           </div>
@@ -184,7 +223,7 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col items-end mr-4">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">MongoDB Status: Online</span>
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">MongoDB Atlas: Online</span>
               <span className="text-xs font-bold text-slate-400">{new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
              <button className="relative p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all">
