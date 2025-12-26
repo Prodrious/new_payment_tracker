@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, Users, CalendarDays, 
   Menu, LogOut, Bell, Loader2, CloudUpload, CheckCircle2, 
-  CloudOff, Settings, Sparkles
+  CloudOff, Settings, Sparkles, X
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import StudentsPage from './components/StudentsPage';
@@ -24,14 +24,20 @@ export default function App() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [loadedStudents, loadedSchedules] = await Promise.all([
-        ApiService.getStudents(),
-        ApiService.getSchedules()
-      ]);
-      setStudents(loadedStudents);
-      setSchedules(loadedSchedules);
-      setIsLoading(false);
-      initialLoadDone.current = true;
+      try {
+        const [loadedStudents, loadedSchedules] = await Promise.all([
+          ApiService.getStudents(),
+          ApiService.getSchedules()
+        ]);
+        setStudents(loadedStudents);
+        setSchedules(loadedSchedules);
+        setCloudStatus('connected');
+      } catch (e) {
+        setCloudStatus('local');
+      } finally {
+        setIsLoading(false);
+        initialLoadDone.current = true;
+      }
     };
     fetchData();
   }, []);
@@ -70,16 +76,17 @@ export default function App() {
       setStudents([]);
       setSchedules([]);
       localStorage.clear();
+      window.location.reload();
     }
   };
 
   if (isLoading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+    <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
       <div className="relative">
         <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
         <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-indigo-300 animate-pulse" />
       </div>
-      <p className="mt-6 text-[10px] font-black uppercase tracking-[0.5em] text-indigo-400">Booting System</p>
+      <p className="mt-8 text-[11px] font-black uppercase tracking-[0.6em] text-indigo-400">Loading Dashboard</p>
     </div>
   );
 
@@ -98,6 +105,9 @@ export default function App() {
               <CalendarDays className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-black text-white tracking-tight italic">TutorTrack<span className="text-indigo-500">.</span></h1>
+            <button className="lg:hidden ml-auto text-slate-500" onClick={() => setIsSidebarOpen(false)}>
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
           <nav className="flex-1 space-y-2">
@@ -128,12 +138,12 @@ export default function App() {
             </button>
             <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800/50 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white">A</div>
-              <div>
-                <p className="text-[10px] font-black text-white uppercase tracking-widest">Tutor Admin</p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-white uppercase tracking-widest truncate">Tutor Admin</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                    <div className={`w-1.5 h-1.5 rounded-full ${cloudStatus === 'connected' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
                    <p className="text-[9px] font-bold uppercase tracking-tighter opacity-60">
-                    {cloudStatus === 'connected' ? 'Cloud' : 'Local'}
+                    {cloudStatus === 'connected' ? 'Cloud Sync' : 'Offline'}
                    </p>
                 </div>
               </div>
@@ -155,12 +165,12 @@ export default function App() {
               {isSyncing ? (
                 <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                   <CloudUpload className="w-3.5 h-3.5 animate-bounce" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Syncing</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Saving</span>
                 </div>
               ) : (
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${cloudStatus === 'connected' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${cloudStatus === 'connected' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                   {cloudStatus === 'connected' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CloudOff className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-black uppercase tracking-widest">{cloudStatus === 'connected' ? 'Active' : 'Offline'}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{cloudStatus === 'connected' ? 'Live' : 'Local'}</span>
                 </div>
               )}
             </div>
