@@ -1,5 +1,6 @@
 
-import { connectToDatabase } from './lib/db';
+// Fix: Import connectToDatabase from the valid mongodb utility in the lib directory
+import { connectToDatabase } from '../lib/mongodb';
 
 export default async function handler(req: any, res: any) {
   try {

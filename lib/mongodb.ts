@@ -6,21 +6,25 @@ const uri = process.env.MONGODB_URI || "";
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
 
+/**
+ * Robust MongoDB connection handler with pooling and error surfacing.
+ */
 export async function connectToDatabase(): Promise<Db> {
+  // Use cached connection if available for performance
   if (cachedClient && cachedDb) {
     return cachedDb;
   }
 
   if (!uri) {
-    console.error("MONGODB_URI is missing from environment variables.");
+    console.error("Critical: MONGODB_URI is not defined.");
     throw new Error('MONGODB_URI_MISSING');
   }
 
   try {
-    // Setting a timeout so the UI doesn't hang forever on IP whitelist issues
     const client = new MongoClient(uri, {
-      connectTimeoutMS: 5000,
-      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 8000,      // Fail faster if network is blocked
+      serverSelectionTimeoutMS: 8000,
+      maxPoolSize: 10,             // Efficient for small apps
     });
     
     await client.connect();
@@ -29,11 +33,19 @@ export async function connectToDatabase(): Promise<Db> {
     cachedClient = client;
     cachedDb = db;
 
-    console.log("Successfully connected to MongoDB");
+    console.log("MongoDB instance ready.");
     return db;
   } catch (error: any) {
-    console.error("MongoDB Connection Error Details:", error.message);
-    // If it's an IP whitelist error, the message usually contains 'ETIMEDOUT' or 'Could not connect'
+    console.error("Database Connection Failed:", error.message);
+    
+    // Check for common Atlas errors to provide better UI hints
+    if (error.message.includes('ETIMEDOUT')) {
+      throw new Error('NETWORK_TIMEOUT');
+    }
+    if (error.message.includes('authentication failed')) {
+      throw new Error('AUTH_FAILED');
+    }
+    
     throw error;
   }
 }
