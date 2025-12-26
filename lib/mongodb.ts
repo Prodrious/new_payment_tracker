@@ -12,15 +12,19 @@ export async function connectToDatabase(): Promise<Db> {
   }
 
   if (!uri) {
-    console.warn("MONGODB_URI not found. App will fail to persist data.");
-    throw new Error('Please add your MONGODB_URI to environment variables');
+    throw new Error('MONGODB_URI environment variable is not defined. Please add it to your environment.');
   }
 
-  const client = await MongoClient.connect(uri);
-  const db = client.db('tutortrack');
+  try {
+    const client = await MongoClient.connect(uri);
+    const db = client.db('tutortrack');
 
-  cachedClient = client;
-  cachedDb = db;
+    cachedClient = client;
+    cachedDb = db;
 
-  return db;
+    return db;
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error);
+    throw error;
+  }
 }

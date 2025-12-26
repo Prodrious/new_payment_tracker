@@ -8,6 +8,7 @@ export async function GET() {
     const students = await db.collection('students').find({}).toArray();
     return NextResponse.json(students);
   } catch (error: any) {
+    console.error("API GET Students Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("API POST Students Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
