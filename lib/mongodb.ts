@@ -12,19 +12,28 @@ export async function connectToDatabase(): Promise<Db> {
   }
 
   if (!uri) {
-    throw new Error('MONGODB_URI environment variable is not defined. Please add it to your environment.');
+    console.error("MONGODB_URI is missing from environment variables.");
+    throw new Error('MONGODB_URI_MISSING');
   }
 
   try {
-    const client = await MongoClient.connect(uri);
+    // Setting a timeout so the UI doesn't hang forever on IP whitelist issues
+    const client = new MongoClient(uri, {
+      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000,
+    });
+    
+    await client.connect();
     const db = client.db('tutortrack');
 
     cachedClient = client;
     cachedDb = db;
 
+    console.log("Successfully connected to MongoDB");
     return db;
-  } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
+  } catch (error: any) {
+    console.error("MongoDB Connection Error Details:", error.message);
+    // If it's an IP whitelist error, the message usually contains 'ETIMEDOUT' or 'Could not connect'
     throw error;
   }
 }

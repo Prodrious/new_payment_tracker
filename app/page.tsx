@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, Users, CalendarDays, 
   Menu, LogOut, Bell, Loader2, CloudUpload, CheckCircle2, 
-  Database, RefreshCw, ExternalLink
+  Database, RefreshCw, AlertCircle
 } from 'lucide-react';
 import Dashboard from '../components/Dashboard';
 import StudentsPage from '../components/StudentsPage';
@@ -37,7 +37,7 @@ export default function Home() {
       initialLoadDone.current = true;
     } catch (error: any) {
       console.error("Critical: Database connection failed", error);
-      setDbError(error.message || "Failed to connect to Node.js API.");
+      setDbError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +47,6 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Debounced Sync Logic
   useEffect(() => {
     if (!initialLoadDone.current || isLoading || dbError) return;
 
@@ -63,7 +62,7 @@ export default function Home() {
       } finally {
         setTimeout(() => setIsSyncing(false), 1000);
       }
-    }, 2000); // Wait 2 seconds of inactivity to sync
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [students, schedules, isLoading, dbError]);
@@ -87,7 +86,7 @@ export default function Home() {
   if (isLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#0f172a] text-white">
       <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-      <p className="text-sm font-black uppercase tracking-[0.3em] opacity-50">Initializing Node.js Stack...</p>
+      <p className="text-sm font-black uppercase tracking-[0.3em] opacity-50">Connecting to Cloud...</p>
     </div>
   );
 
@@ -95,12 +94,24 @@ export default function Home() {
     <div className="h-screen flex items-center justify-center bg-[#f8fafc] p-6">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-rose-100 p-10 text-center animate-slide-in">
         <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-          <Database className="w-10 h-10" />
+          <AlertCircle className="w-10 h-10" />
         </div>
-        <h1 className="text-2xl font-black text-slate-900 mb-4 tracking-tighter">Database Error</h1>
-        <p className="text-slate-500 text-sm leading-relaxed mb-8">
-          We couldn't reach your Node.js backend or MongoDB instance. Ensure your <code className="bg-slate-100 px-1 rounded">MONGODB_URI</code> is set in Vercel.
-        </p>
+        <h1 className="text-2xl font-black text-slate-900 mb-2 tracking-tighter">Connection Error</h1>
+        
+        <div className="bg-rose-50 rounded-2xl p-4 mb-6">
+          <p className="text-rose-600 text-xs font-mono break-all font-bold">
+            {dbError === 'MONGODB_URI_MISSING' 
+              ? 'Variable MONGODB_URI is not set in Environment Settings.' 
+              : `Server says: ${dbError}`}
+          </p>
+        </div>
+
+        <ul className="text-left text-slate-500 text-[11px] space-y-2 mb-8 list-disc pl-5 font-medium leading-relaxed">
+          <li>Ensure your IP is <strong>Whitelisted</strong> in MongoDB Atlas (Allow 0.0.0.0/0).</li>
+          <li>Check if your password contains <strong>special characters</strong> (they must be encoded).</li>
+          <li>Confirm your URI looks like <code>mongodb+srv://...</code></li>
+        </ul>
+
         <button onClick={() => window.location.reload()} className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">
           <RefreshCw className="w-4 h-4" /> Try Again
         </button>

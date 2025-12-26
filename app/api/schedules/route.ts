@@ -9,7 +9,10 @@ export async function GET() {
     return NextResponse.json(schedules);
   } catch (error: any) {
     console.error("API GET Schedules Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Unknown Database Error" }, 
+      { status: 500 }
+    );
   }
 }
 
@@ -27,6 +30,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("API POST Schedules Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to save schedules" }, 
+      { status: 500 }
+    );
   }
 }
