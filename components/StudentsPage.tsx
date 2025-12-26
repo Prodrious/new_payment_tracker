@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { UserPlus, Search, X, PlusCircle, History } from 'lucide-react';
+import { UserPlus, Search, X, PlusCircle, UserCheck, AlertCircle } from 'lucide-react';
 import { Student, PaymentType, ClassSchedule } from '../types';
 import { CURRENCY_CONFIG } from '../constants';
 
@@ -78,7 +78,7 @@ const StudentsPage: React.FC<StudentsPageProps> = ({ students, schedules, onAddS
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter italic">Directory</h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5">Manage Student Accounts</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto flex items-center justify-center gap-3 bg-indigo-600 text-white px-8 py-5 rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-indigo-700 transition-all">
+        <button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto flex items-center justify-center gap-3 bg-indigo-600 text-white px-8 py-5 rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-indigo-700 transition-all hover:scale-[1.02] active:scale-95">
           <UserPlus className="w-5 h-5" /> Enroll Student
         </button>
       </div>
@@ -88,53 +88,63 @@ const StudentsPage: React.FC<StudentsPageProps> = ({ students, schedules, onAddS
         <input type="text" placeholder="Search students..." className="w-full pl-16 pr-8 py-6 bg-white border border-slate-200 rounded-[2.5rem] outline-none shadow-sm focus:ring-8 focus:ring-indigo-50 font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        {filtered.map(s => {
-          const balance = calculateBalance(s);
-          return (
-            <div key={s.id} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all flex flex-col h-full">
-              <div className="flex justify-between items-start mb-10">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl">{s.name.charAt(0)}</div>
-                <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${s.paymentType === 'upfront' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                  {s.paymentType}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-slate-100 border-dashed">
+          <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-[2rem] flex items-center justify-center mb-6">
+            <UserCheck className="w-10 h-10" />
+          </div>
+          <p className="font-black text-slate-900 uppercase text-xs tracking-widest mb-2">No students found</p>
+          <p className="text-slate-400 text-[10px] font-bold uppercase">Try adjusting your search or enroll a new student.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          {filtered.map(s => {
+            const balance = calculateBalance(s);
+            return (
+              <div key={s.id} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all flex flex-col h-full group">
+                <div className="flex justify-between items-start mb-10">
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl group-hover:scale-110 transition-transform">{s.name.charAt(0)}</div>
+                  <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${s.paymentType === 'upfront' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                    {s.paymentType}
+                  </div>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-1 tracking-tighter">{s.name}</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">{s.className}</p>
+                
+                <div className="mt-auto space-y-4">
+                  <div className="bg-slate-50 p-6 rounded-2xl">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                    <p className="font-black text-slate-900 tracking-tighter">
+                      {s.paymentType === 'upfront' ? formatCurrency(balance) : 'Active Billing'}
+                    </p>
+                  </div>
+                  {s.paymentType === 'upfront' && (
+                    <button onClick={() => setShowTopupModal(s.id)} className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700 transition-colors">
+                      <PlusCircle className="w-4 h-4" /> Deposit
+                    </button>
+                  )}
                 </div>
               </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-1 tracking-tighter">{s.name}</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">{s.className}</p>
-              
-              <div className="mt-auto space-y-4">
-                <div className="bg-slate-50 p-6 rounded-2xl">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                  <p className="font-black text-slate-900 tracking-tighter">
-                    {s.paymentType === 'upfront' ? formatCurrency(balance) : 'Active Billing'}
-                  </p>
-                </div>
-                {s.paymentType === 'upfront' && (
-                  <button onClick={() => setShowTopupModal(s.id)} className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700">
-                    <PlusCircle className="w-4 h-4" /> Deposit
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <form onSubmit={handleAdd} className="bg-white rounded-[3rem] w-full max-w-md p-10 shadow-2xl animate-slide-in">
-            <h2 className="text-2xl font-black mb-8 text-slate-900 uppercase">New Enrollment</h2>
+            <h2 className="text-2xl font-black mb-8 text-slate-900 uppercase tracking-tighter italic">Enroll Student</h2>
             <div className="space-y-4">
-              <input required placeholder="Name" className="w-full p-5 bg-slate-50 rounded-xl border outline-none font-bold" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              <input required placeholder="Class" className="w-full p-5 bg-slate-50 rounded-xl border outline-none font-bold" value={formData.className} onChange={e => setFormData({...formData, className: e.target.value})} />
+              <input required placeholder="Full Name" className="w-full p-5 bg-slate-50 rounded-xl border outline-none font-bold focus:bg-white transition-colors" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <input required placeholder="Grade / Subject" className="w-full p-5 bg-slate-50 rounded-xl border outline-none font-bold focus:bg-white transition-colors" value={formData.className} onChange={e => setFormData({...formData, className: e.target.value})} />
               <div className="grid grid-cols-2 gap-4">
-                <input required type="number" placeholder="Rate" className="p-5 bg-slate-50 rounded-xl border outline-none font-bold" value={formData.hourlyRate || ''} onChange={e => setFormData({...formData, hourlyRate: Number(e.target.value)})} />
+                <input required type="number" placeholder="Rate / Hour" className="p-5 bg-slate-50 rounded-xl border outline-none font-bold focus:bg-white transition-colors" value={formData.hourlyRate || ''} onChange={e => setFormData({...formData, hourlyRate: Number(e.target.value)})} />
                 <select className="p-5 bg-slate-50 rounded-xl border outline-none font-bold text-xs uppercase" value={formData.paymentType} onChange={e => setFormData({...formData, paymentType: e.target.value as PaymentType})}>
                   <option value="postpaid">Postpaid</option>
                   <option value="upfront">Prepaid</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-black mt-4">Save Profile</button>
+              <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors mt-4">Create Account</button>
               <button type="button" onClick={() => setShowAddModal(false)} className="w-full py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">Cancel</button>
             </div>
           </form>
@@ -143,12 +153,15 @@ const StudentsPage: React.FC<StudentsPageProps> = ({ students, schedules, onAddS
 
       {showTopupModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-          <form onSubmit={handleTopup} className="bg-white rounded-[3rem] w-full max-w-sm p-10 text-center animate-slide-in">
-            <h2 className="text-xl font-black mb-8 text-slate-900">DEPOSIT FUNDS</h2>
-            <input required type="number" autoFocus className="w-full text-5xl font-black text-center mb-10 outline-none text-indigo-600" value={topupAmount || ''} onChange={e => setTopupAmount(Number(e.target.value))} />
+          <form onSubmit={handleTopup} className="bg-white rounded-[3rem] w-full max-w-sm p-10 text-center shadow-2xl animate-slide-in">
+            <h2 className="text-xl font-black mb-8 text-slate-900 tracking-widest uppercase">Deposit Funds</h2>
+            <div className="relative mb-10">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-4xl font-black">₹</span>
+              <input required type="number" autoFocus className="w-full text-5xl font-black text-center outline-none text-indigo-600 py-4 bg-slate-50 rounded-2xl" value={topupAmount || ''} onChange={e => setTopupAmount(Number(e.target.value))} />
+            </div>
             <div className="flex gap-4">
-              <button type="button" onClick={() => setShowTopupModal(null)} className="flex-1 py-4 bg-slate-100 rounded-xl font-black uppercase text-xs">Cancel</button>
-              <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs">Confirm</button>
+              <button type="button" onClick={() => setShowTopupModal(null)} className="flex-1 py-4 bg-slate-100 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-slate-200">Back</button>
+              <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700">Submit</button>
             </div>
           </form>
         </div>

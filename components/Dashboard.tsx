@@ -6,8 +6,8 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, Wallet, Clock, UserCheck, 
-  ChevronLeft, ChevronRight, FileText, Share2,
-  CheckCircle, Calendar, X
+  ChevronLeft, ChevronRight, CheckCircle, 
+  PlusCircle, LayoutDashboard, Sparkles, X, AlertCircle
 } from 'lucide-react';
 import { Student, ClassSchedule } from '../types';
 import { MONTHS, CURRENCY_CONFIG } from '../constants';
@@ -20,7 +20,6 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ students, schedules, onUpdateStatus }) => {
   const [showDuesModal, setShowDuesModal] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
 
   const formatCurrency = (val: number) => {
@@ -106,27 +105,39 @@ const Dashboard: React.FC<DashboardProps> = ({ students, schedules, onUpdateStat
       .slice(0, 5);
   }, [schedules]);
 
-  const invoice = useMemo(() => {
-    if (!selectedInvoiceId) return null;
-    const student = students.find(s => s.id === selectedInvoiceId);
-    if (!student) return null;
-    
-    const sessions = schedules.filter(s => 
-      s.studentId === student.id && 
-      s.status === 'completed' && 
-      (student.paymentType === 'postpaid' ? s.paymentStatus === 'pending' : true)
+  // Welcome / Empty State
+  if (students.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-slide-in text-center px-4">
+        <div className="w-32 h-32 bg-indigo-50 rounded-[3rem] flex items-center justify-center mb-8 relative">
+          <Sparkles className="w-12 h-12 text-indigo-500" />
+          <div className="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-2xl shadow-lg border border-indigo-100 flex items-center justify-center animate-bounce">
+            <PlusCircle className="w-5 h-5 text-indigo-600" />
+          </div>
+        </div>
+        <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-4 italic">Ready to start tracking?</h2>
+        <p className="text-slate-500 max-w-md mb-10 font-medium leading-relaxed">
+          Your cloud database is successfully connected and ready. <br/>
+          Head over to the <strong className="text-indigo-600">Students</strong> tab to enroll your first pupil and start booking sessions.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full">
+          {[
+            { title: "Enroll", desc: "Add student profiles", icon: UserCheck },
+            { title: "Schedule", desc: "Book recurring slots", icon: Clock },
+            { title: "Track", desc: "Monitor payments", icon: Wallet }
+          ].map((step, idx) => (
+            <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <step.icon className="w-5 h-5 text-slate-400" />
+              </div>
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-1">{step.title}</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     );
-
-    const consumed = sessions.reduce((acc, s) => acc + (getDuration(s.startTime, s.endTime) * (student.hourlyRate || 0)), 0);
-    const totalDeposited = (student.topups || []).reduce((acc, t) => acc + (t.amount || 0), 0);
-    const lifetimeConsumed = schedules
-      .filter(s => s.studentId === student.id && s.status === 'completed')
-      .reduce((acc, s) => acc + (getDuration(s.startTime, s.endTime) * (student.hourlyRate || 0)), 0);
-    
-    const balance = totalDeposited - lifetimeConsumed;
-
-    return { student, sessions, consumed, balance };
-  }, [selectedInvoiceId, students, schedules]);
+  }
 
   return (
     <div className="space-y-8 animate-slide-in">
@@ -176,7 +187,10 @@ const Dashboard: React.FC<DashboardProps> = ({ students, schedules, onUpdateStat
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: '800'}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: '800'}} />
-                <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', padding: '20px'}} />
+                <Tooltip 
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', padding: '20px'}}
+                  formatter={(value: any) => [formatCurrency(value), 'Income']}
+                />
                 <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={4} fill="url(#areaGrad)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -189,20 +203,27 @@ const Dashboard: React.FC<DashboardProps> = ({ students, schedules, onUpdateStat
             <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest">{upcomingSessions.length} Scheduled</span>
           </div>
           <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {upcomingSessions.map(s => {
-              const student = students.find(st => st.id === s.studentId);
-              return (
-                <div key={s.id} className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl group border border-transparent hover:border-indigo-100 transition-all">
-                  <div className="min-w-0">
-                    <p className="font-black text-sm text-slate-900 truncate">{student?.name || 'Deleted'}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{s.date} • {s.startTime}</p>
+            {upcomingSessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full opacity-40">
+                <Clock className="w-10 h-10 mb-2" />
+                <p className="text-[10px] font-black uppercase tracking-widest">No upcoming slots</p>
+              </div>
+            ) : (
+              upcomingSessions.map(s => {
+                const student = students.find(st => st.id === s.studentId);
+                return (
+                  <div key={s.id} className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl group border border-transparent hover:border-indigo-100 transition-all">
+                    <div className="min-w-0">
+                      <p className="font-black text-sm text-slate-900 truncate">{student?.name || 'Deleted'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{s.date} • {s.startTime}</p>
+                    </div>
+                    <button onClick={() => onUpdateStatus(s.id, 'completed', student?.paymentType === 'upfront' ? 'paid' : 'pending')} className="p-3 bg-white text-indigo-600 rounded-2xl shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600 hover:text-white">
+                      <CheckCircle className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button onClick={() => onUpdateStatus(s.id, 'completed', student?.paymentType === 'upfront' ? 'paid' : 'pending')} className="p-3 bg-white text-indigo-600 rounded-2xl shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-600 hover:text-white">
-                    <CheckCircle className="w-5 h-5" />
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -215,15 +236,24 @@ const Dashboard: React.FC<DashboardProps> = ({ students, schedules, onUpdateStat
               <button onClick={() => setShowDuesModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
             </div>
             <div className="p-8 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              {financials.pendingList.map(p => (
-                <div key={p.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-transparent hover:border-rose-200 transition-all">
-                  <div>
-                    <p className="font-black text-slate-900">{p.name}</p>
-                    <p className="text-[10px] font-black uppercase text-rose-500 tracking-widest">{p.type}</p>
+              {financials.pendingList.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8" />
                   </div>
-                  <p className="text-xl font-black text-rose-600 tracking-tighter">{formatCurrency(p.amount)}</p>
+                  <p className="font-black text-slate-900 uppercase text-xs tracking-widest">All accounts settled</p>
                 </div>
-              ))}
+              ) : (
+                financials.pendingList.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-transparent hover:border-rose-200 transition-all">
+                    <div>
+                      <p className="font-black text-slate-900">{p.name}</p>
+                      <p className="text-[10px] font-black uppercase text-rose-500 tracking-widest">{p.type}</p>
+                    </div>
+                    <p className="text-xl font-black text-rose-600 tracking-tighter">{formatCurrency(p.amount)}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
